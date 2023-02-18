@@ -1,0 +1,271 @@
+import math
+
+
+class MinHeap:
+    """
+    Class for creating a heap which is organized by the smallest value coming
+    first, or by the lowest priority coming first
+    """
+
+    @staticmethod
+    def parent_index(i):
+        """
+        Finds index of parent from child index
+        Input: child index int
+        Output: parent index int
+        """
+
+        if i == 0:
+            return None
+        return (i - 1) // 2
+
+    @staticmethod
+    def left_child_index(i):
+        """
+        Finds index of left child from parent index
+        Input: parent index int
+        Output: left child index int
+        """
+
+        return 2 * i + 1
+
+    @staticmethod
+    def right_child_index(i):
+        """
+        Finds index of right child from parent index
+        Input: parent index int
+        Output: right child index int
+        """
+        return 2 * i + 2
+
+    def __init__(self, index_of_item = {}, max_capacity=999):
+        """
+        Creates a minheap structured as an array seen as self.data.
+        the max capaxity is the total number of nodes/values in the heap.
+        self.next is the index we are currently looking to insert into.
+        Parameters:
+            index_of_item: dictionary with keys as the item and values as the
+            index of that item in self.data
+            max capacity: how many nodes are in the heap
+        """
+
+        self.data = [None] * max_capacity
+        self.next = 0
+        self.index_of_item = index_of_item
+
+    def size(self):
+        """
+        Returns the index of self.next, which is the highest index in the heap,
+        so the size of the heap
+        """
+
+        return self.next
+
+    def height(self):
+        """
+        Finds the level n the heap that self.next is on
+        Input: the minheap array
+        Output: The level we are currently looking to insert into
+        with self.next index
+        """
+
+        return math.floor(math.log(self.next, 2)) + 1
+
+    def is_empty(self):
+        """
+        Returns True if the heap is empty
+        """
+
+        return self.next == 0
+
+    def reset(self):
+        """
+        Sets self.next to be 0, which means the heap is getting completely
+        redone
+        """
+
+        self.next = 0
+
+    def min(self):
+        """
+        Returns the minimum value in the heap
+        input: minheap array
+        output(tuple): the minimum value in the array ie. the 0th index
+        """
+
+        if self.is_empty():
+            return None
+        return self.data[0]
+
+    def _swap(self, p, q):
+        """
+        Swaps two values indices in the heap
+        Input: the minheap array, and two indexes to be swapped position
+        Output: no output
+        """
+
+        assert p < self.next and q < self.next
+        tmp = self.data[p]
+        self.data[p] = self.data[q]
+        self.data[q] = tmp
+
+        self.dict_change(p, q)
+
+    def dict_change(self, p, q):
+        """
+        Swaps two values in index_of_item to align with _swap
+        Input:
+            p, q: indices to be swapped
+        No Output
+        """
+
+        self.index_of_item[self.data[q][1]] = q
+        self.index_of_item[self.data[p][1]] = p
+
+
+    def _sift_up(self, pos):
+        """
+        If the value at index pos is less then the index of its parent, swaps.
+        Input: minheap array, index to sift up
+        Output: no output
+        """
+
+        if pos == 0:
+            return
+        pi = MinHeap.parent_index(pos)
+        if self.data[pos][0] < self.data[pi][0]:
+            self._swap(pos, pi)
+            self._sift_up(pi)
+
+    def _sift_down(self, pos):
+        """
+        If the value at index pos is less then the index of its child, swaps.
+        Input: minheap array, index to sift down
+        Output: no output
+        """
+
+        curr = self.data[pos]
+        li = MinHeap.left_child_index(pos)
+        ri = MinHeap.right_child_index(pos)
+
+        if li >= self.next:
+            return
+
+        if li < self.next and ri >= self.next:
+            lc = self.data[li]
+            m = min(curr[0], lc[0])
+            if lc[0] == m:
+                self._swap(pos, li)
+                self._sift_down(li)
+            else:
+                self.dict_change(pos, li)
+        else:
+            (lc, rc) = (self.data[li], self.data[ri])
+            m = min([curr[0], lc[0], rc[0]])
+            if rc[0] == m:
+                self._swap(pos, ri)
+                self._sift_down(ri)
+            elif lc[0] == m:
+                self._swap(pos, li)
+                self._sift_down(li)
+
+    def remove_min(self):
+        """
+        removes the minimum value in the array, and reorganizes the array back
+        to proper order
+        input: minheap array
+        output: the minimum value of the array before removal
+        """
+
+        if self.is_empty():
+            return None
+        min_item = self.data[0]
+        if self.next > 0:
+            self.data[0] = self.data[self.next - 1]
+            self.next -= 1
+            self._sift_down(0)
+        self.index_of_item[self.data[0][1]] = 0
+        del self.index_of_item[min_item[1]]
+        return min_item
+
+    def insert(self, priority, item):
+        """
+        inserts value n into the array at the index of self.next.  changes that
+        index from none --> value.  Then reorders the array until it is proper
+        Input: array, value to be inserted
+        Output: no return
+        """
+
+        self.data[self.next] = (priority, item)
+        self.index_of_item[item] = self.next
+        self.next += 1
+        self._sift_up(self.next - 1)
+
+    def _verify(self, pos):
+        """
+        Checks if the array is in proper order
+        Input: array
+        Output: boolean
+        """
+
+        if pos >= self.next:
+            return True
+        curr = self.data[pos]
+        li = MinHeap.left_child_index(pos)
+        ri = MinHeap.right_child_index(pos)
+        if ri < self.next:
+            return (
+                curr <= self.data[ri]
+                and curr <= self.data[li]
+                and self._verify(ri)
+                and self._verify(li)
+            )
+        if li < self.next:
+            return curr <= self.data[li] and self._verify(li)
+        return True
+
+    def verify(self):
+        """
+        Checks full array for proper ordering
+        input: array
+        output: boolean
+        """
+
+        return self._verify(0)
+
+    def show(self):
+        """
+        Prints the heap in its appropriate levels as lines, and order from left
+        to right
+        """
+
+        if self.is_empty():
+            print("[empty]")
+            return
+        linebreak = 1
+        row_count = 0
+        for i in range(self.next):
+            print(self.data[i], end=" ")
+            row_count += 1
+            if row_count == linebreak or i == self.next - 1:
+                print()
+                linebreak *= 2
+                row_count = 0
+
+    def change_priority(self, item, priority):
+        """
+        Changes the priority of an item and reorders the heap and index_of_item
+        input:
+            item: a string representing an item in the heap
+            priority: the new priority to assign (int)
+        """
+
+        if item not in self.index_of_item:
+            raise ValueError("not in dictionary")
+
+        index = self.index_of_item[item]
+
+        self.data[index] = (priority, item)
+
+        self._sift_up(index)
+        self._sift_down(index)
