@@ -1,0 +1,31 @@
+def rightSideView(self, root):
+    """
+    Binary Tree is represented by a list of integers with None in place for empty nodes.
+    
+    :type root: TreeNode
+    :rtype: List[int]
+    """
+
+    levels = math.trunc(math.log(len(root), 2))
+    lev = []
+
+    for i in range(levels+1):
+        lev.append(i)
+
+    lev = [(2**x)-1 for x in lev]
+
+    lev.append(len(root)+1)
+    l = len(lev)
+
+    right = []
+
+    for i in range(l-1):
+        low = lev[i]
+        upp = lev[i+1]
+        check = root[low:upp]
+        check.reverse()
+        for val in check:
+            if val is not None:
+                right.append(val)
+                break
+    return right
