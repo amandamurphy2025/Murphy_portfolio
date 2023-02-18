@@ -1,0 +1,39 @@
+def kWeakestRows(self, mat, k):
+    """
+    You are given an m x n binary matrix mat of 1's (representing soldiers) and 0's (representing civilians). The soldiers are positioned in front of the civilians. That is, all the 1's will appear to the left of all the 0's in each row.
+
+    A row i is weaker than a row j if one of the following is true:
+
+    The number of soldiers in row i is less than the number of soldiers in row j.
+    Both rows have the same number of soldiers and i < j.
+    Return the indices of the k weakest rows in the matrix ordered from weakest to strongest.
+
+    :type mat: List[List[int]]
+    :type k: int
+    :rtype: List[int]
+    """
+
+    m = mat
+
+    for idx, list in enumerate(m):
+        r = 0
+        for int in list:
+            if int == 1:
+                r = r + 1
+            m[idx] = r
+
+    tier = [0] * len(m)
+
+    for idx, val in enumerate(m):
+        tier_idx = 0
+        for idx_x, val_x in enumerate(m):
+            if idx != idx_x:
+                if val < val_x:
+                    tier_idx = tier_idx + 1
+                elif val == val_x and idx < idx_x:
+                    tier_idx = tier_idx + 1
+        tier[tier_idx] = idx
+
+    tier.reverse()
+
+    return tier[0: k]
