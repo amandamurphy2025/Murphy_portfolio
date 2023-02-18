@@ -1,0 +1,142 @@
+import math
+import graph
+import minheap
+from util import haversine
+
+
+def build_path(gr, start, end):
+    """
+    Returns the path between the specified vertices in the graph
+    Parameters:
+        gr : Graph
+        start : Vertex : the starting vertex
+        end   : Vertex : the final destination
+    Returns: list[str] : the shortest path identified between these vertices
+    """
+
+    names = []
+
+    return build_help(start, end, names)
+
+def build_help(start, end, names):
+    """
+    Returns a list with all the names of the predecessors from the end to start
+    Parameters:
+        start: start : Vertex : the starting vertex
+        end   : Vertex : the final destination
+        names: a list of strings
+    """
+
+    if end != start:
+        names.append(end.name)
+        if end.predecessor is not None:
+            return build_help(start, end.predecessor, names)
+    else:
+        names.append(end.name)
+        names.reverse()
+        return names
+
+def a_star(gr, start, end):
+    """
+    Finds a shortest path between the specified vertices in the graph
+    using A* Search
+    Parameters:
+        gr : Graph
+        start : Vertex : the starting vertex
+        end   : Vertex : the final destination
+    Returns: tuple[float, list[str], set[Vertex]] or None : None if no path
+        exists, otherwise, a tuple of shortest path distance, the vertices
+        along the path, and the set of vertices visited during the computation
+    """
+
+    opend = minheap.MinHeap()
+    closed = []
+
+    start.g_cost = 0
+    start.h_cost = 0
+
+    start.f_cost = start.g_cost + start.h_cost
+
+    opend.insert(0, start.name)
+
+    loop(gr, opend, closed, end)
+
+    distance = end.g_cost
+
+    path = build_path(gr, start, end)
+
+    a = (distance, path, closed)
+
+    for val in a:
+        if val is None:
+            return None
+
+    return a
+
+def loop(gr, opend, closed, end):
+    """
+    Updates the costs and predecessor assignments while looping through the
+    vertexes until it finds the end vertex
+    Parameters:
+        opend: MinHeap, priority heap containing airports/vertexes
+        closed: list of vertexes that have been visited
+        end: Vertex : the final destination
+    """
+
+    ##loop begins
+
+    if opend.is_empty() is False:
+
+        curr = opend.remove_min()
+
+        curr = gr.get_vertex(curr[1])
+
+        closed.append(curr)
+
+        if curr == end:
+            return
+
+        for _, val in curr.edges_to.items():
+            if val[0] not in closed:
+                if val[0].g_cost > curr.g_cost + val[1]:
+                    val[0].g_cost = curr.g_cost + val[1]
+                val[0].h_cost = haversine(val[0].lat, val[0].long, end.lat, end.long)
+                if val[0].f_cost > val[0].g_cost + val[0].h_cost:
+                    val[0].f_cost = val[0].g_cost + val[0].h_cost
+                    val[0].predecessor = curr
+
+                check_op = [item for item in opend.data if item is not None and gr.get_vertex(item[1]) == val[0]]
+                if len(check_op) != 0:
+                    opend.change_priority(val[0].name, val[0].f_cost)
+                else:
+                    opend.insert(val[0].f_cost, val[0].name)
+
+        loop(gr, opend, closed, end)
+        
+        
+from math import radians, cos, sin, asin, sqrt
+
+def haversine(lat1, long1, lat2, long2):
+    """
+    Calculate the great circle distance between two points
+    on the earth
+    Parameters:
+        lat1, long1 : float : latitude and longitude of one position
+                              (in decimal degrees)
+        lat2, long2 : float : latitude and longitude of a second position
+                              (in decimal degrees)
+        
+    Returns: float : distance in statute miles
+    """
+    # convert decimal degrees to radians
+    lat1, long1, lat2, long2 = map(radians, [lat1, long1, lat2, long2])
+
+    # haversine formula
+    dlat = lat2 - lat1
+    dlong = long2 - long1
+    a = sin(dlat / 2)**2 + cos(lat1) * cos(lat2) * sin(dlong / 2)**2
+    c = 2 * asin(sqrt(a))
+
+    radius = 3958.8
+    mi = radius * c
+    return mi
