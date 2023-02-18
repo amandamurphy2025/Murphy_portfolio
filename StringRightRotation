@@ -1,0 +1,19 @@
+
+def rotateString(self, s, goal):
+    """
+    Returns True is s is a right rotation of goal.
+    
+    :type s: str
+    :type goal: str
+    :rtype: bool
+    """
+
+    if len(s) != len(goal):
+        return False
+
+    else:
+        test = goal+goal
+        if s in test:
+            return True
+        else:
+            return False
