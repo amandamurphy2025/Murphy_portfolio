@@ -1,0 +1,23 @@
+def nextGreaterElement(self, nums1, nums2):
+    """
+    Returns the largest elements to the right of each number in nums2 given by nums1. Appends -1 if no larger element.
+    
+    :type nums1: List[int]
+    :type nums2: List[int]
+    :rtype: List[int]
+    """
+
+    next_gr = []
+
+    for num in nums1:
+        idx = nums2.index(num)
+        for idxx, n in enumerate(nums2[idx+1:]):
+            if n > num:
+                next_gr.append(n)
+                break
+            elif idxx == len(nums2[idx+1:]) - 1:
+                next_gr.append(-1)
+        if len(nums2[idx+1:]) == 0:
+            next_gr.append(-1)
+
+    return next_gr
