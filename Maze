@@ -1,0 +1,395 @@
+import random
+
+class Cell:
+    """
+    Class for representing an individual cell.
+    """
+
+    def __init__(self, row, column):
+        self.row = row
+        self.column = column
+
+        self.north = None
+        self.east = None
+        self.south = None
+        self.west = None
+
+    def __repr__(self):
+        dirs = []
+        dirs.append("N" if self.north else " ")
+        dirs.append("E" if self.east else " ")
+        dirs.append("S" if self.south else " ")
+        dirs.append("W" if self.west else " ")
+        dir_str = f"<{''.join(dirs)}>"
+
+        return f"Cell({self.row:2}, {self.column:2}){dir_str}"
+
+    def shuffle_directions(self, directions, seed):
+        """
+        Takes a list of directions and a seed, and shuffles them.
+        Parameters:
+         - directions: list of tuples, where each tuple contains
+           a string representing a direction ("N", "E", "S", "W")
+           and a Cell object.
+         - seed: an integer representing a random seed
+        Returns: a randomly shuffled copy of the directions list.
+        """
+        assert 1 <= len(directions) <= 4, \
+            "directions parameter should have between 1 and 4 elements"
+
+        actual_seed = self.row * 1000000 + self.column * 1000 + seed
+        random.seed(actual_seed)
+
+        rv = directions[:]
+        random.shuffle(rv)
+
+        return rv
+        
+        
+from cell import Cell
+
+def make_row(row_list):
+
+    row_final = row_list[0]
+
+    del row_list[0]
+
+    for cell in row_list:
+        row_final[0].extend(cell[0][1:])
+
+    for cell in row_list:
+        row_final[1].extend(cell[1][1:])
+
+    for cell in row_list:
+        row_final[2].extend(cell[2][1:])
+
+    return row_final
+
+def check_north(cell):
+    if cell.north != None:
+        return True
+def check_east(cell):
+    if cell.east != None:
+        return True
+def check_south(cell):
+    if cell.south != None:
+        return True
+def check_west(cell):
+    if cell.west != None:
+        return True
+
+
+
+
+
+# Characters for representing mazes as strings
+WALL = "#"
+CELL = "·"
+PATH = " "
+TRAIL = "o"
+CURN = "^"
+CURE = ">"
+CURS = "v"
+CURW = "<"
+
+
+class Maze:
+    """
+    A class for representing mazes
+    """
+
+    def __init__(self, height, width, seed=None):
+        
+        self.height = height
+        self.width = width
+        self.seed = seed
+
+
+        self.grid = []
+        for i in range(height):
+            row = []
+            self.grid.append(row)
+        for idx, _ in enumerate(self.grid):
+            for i in range(width):
+                val = None
+                self.grid[idx].append(val)
+
+        for h in range(height):
+            for r in range(width):
+                cell = Cell(h, r)
+                self.grid[h][r] = cell
+
+        if self.seed != None:
+            self._random_dfs(self.grid[0][0], set([]))
+
+
+
+    def to_string(self, cursor, trail):
+        """
+        Returns a string representation of the maze
+        Parameters:
+            cursor : tuple[Cell, str]
+            trail : list[Cell]
+        Returns: str
+        """
+
+        all_cells = []
+
+        for row in self.grid:
+            row_three = []
+            for cell in row:
+                one_cell = [[WALL, "N", WALL], ["W", CELL, "E"], [WALL, "S", WALL]]
+                if cell.north == None:
+                    one_cell[0][1] = WALL
+                if cell.north != None:
+                    one_cell[0][1] = PATH
+                if cell.west == None:
+                    one_cell[1][0] = WALL
+                if cell.west != None:
+                    one_cell[1][0] = PATH
+                if cell.east == None:
+                    one_cell[1][2] = WALL
+                if cell.east != None:
+                    one_cell[1][2] = PATH
+                if cell.south == None:
+                    one_cell[2][1] = WALL
+                if cell.south != None:
+                    one_cell[2][1] = PATH
+                if cursor != None:
+                    if cursor[0] == cell:
+                        if cursor[1] == "N":
+                            one_cell[1][1] = "^"
+                        if cursor[1] == "S":
+                            one_cell[1][1] = "v"
+                        if cursor[1] == "E":
+                            one_cell[1][1] = ">"
+                        if cursor[1] == "W":
+                            one_cell[1][1] = "<"
+                if trail != None:
+                    for ce in trail:
+                        if ce == cell:
+                            one_cell[1][1] = "o"
+                row_three.append(one_cell)
+            all_cells.append(row_three)
+
+        for idx, row in enumerate(all_cells):
+            all_cells[idx] = make_row(row)
+
+        for row in all_cells[1:]:
+            del row[0]
+
+        all_cells[0][1][0] = PATH
+        all_cells[-1][-1][-2] = PATH
+        all_cells[-1][-1].append("\n")
+
+
+        for row in all_cells:
+            for idx, cell in enumerate(row):
+                row[idx] = "".join(cell)
+
+        for idx, row in enumerate(all_cells):
+            all_cells[idx] = "\n".join(row)
+        
+        print_this = "\n".join(all_cells)
+
+        return print_this
+
+    def __str__(self):
+        
+        return self.to_string(None, [])
+
+
+
+    def locations(self, cell):
+
+        columns = []
+        rows = []
+
+        for roww in self.grid:
+            for celll in roww:
+                columns.append(celll.column)
+                rows.append(celll.row)
+
+        column_lim = max(columns)
+        row_lim = max(rows)
+
+        loc = []
+
+        #for north
+        if (cell.row - 1) >= 0:
+            for cell_check in self.grid[cell.row - 1]:
+                if cell_check.column == cell.column:
+                    loc.append(("N", cell_check))
+
+        #for east
+        if (cell.column + 1) <= column_lim:
+            for cell_check in self.grid[cell.row]:
+                if cell_check.column == (cell.column + 1):
+                    loc.append(("E", cell_check))
+
+        #for south
+        if (cell.row + 1) <= row_lim:
+            for cell_check in self.grid[cell.row + 1]:
+                if cell_check.column == cell.column:
+                    loc.append(("S", cell_check))
+
+        #for west
+        if (cell.column - 1) >= 0:
+            for cell_check in self.grid[cell.row]:
+                if cell_check.column == (cell.column - 1):
+                    loc.append(("W", cell_check))
+
+        return loc
+
+    
+
+    def _random_dfs(self, start, visited):
+        """
+        Uses DFS to generate a random maze.
+        Parameters:
+            start : Cell
+            visited : set[Cell]
+        Returns: (does not return a value)
+        """
+        
+        visited.add(start)
+
+        loc = self.locations(start)
+
+        loc = start.shuffle_directions(loc, self.seed)
+
+        for dir, cell in loc:
+            if cell not in visited:
+                if dir == "N":
+                    start.north = cell
+                    cell.south = start
+                if dir == "E":
+                    start.east = cell
+                    cell.west = start
+                if dir == "S":
+                    start.south = cell
+                    cell.north = start
+                if dir == "W":
+                    start.west = cell
+                    cell.east = start
+                self._random_dfs(cell, visited)
+
+    def directions_to_trail(self, dir_string):
+        """
+        Takes a direction string, and produces the list of Cell objects
+        that would be visited following those directions. If the
+        directions are not valid, returns None.
+        Always starts at Cell (0,0)
+        Parameters:
+            dir_string : str
+        Returns: list[Cell] or None
+        """
+        
+        return self.directions(self.grid[0][0], dir_string, [])
+
+            
+
+    def directions(self, cell, dir_string, cells):
+
+        cells.append(cell)
+
+        if len(dir_string) == 0 or cell == None:
+                return cells 
+        else:
+            if dir_string[0] == "N":
+                if cell.north == None:
+                    cells.append("None")
+                new_cell = cell.north
+            if dir_string[0] == "E":
+                if cell.east == None:
+                    cells.append("None")
+                new_cell = cell.east
+            if dir_string[0] == "S":
+                if cell.south == None:
+                    cells.append("None")
+                new_cell = cell.south
+            if dir_string[0] == "W":
+                if cell.west == None:
+                    cells.append("None")
+                new_cell = cell.west
+            self.directions(new_cell, dir_string[1:], cells)
+
+        if "None" in cells:
+            return None
+        else:
+            return cells
+
+
+    def solve_lefthand(self):
+        """
+        Uses the left-hand algorithm to find a path from the
+        entrance of the maze to its exit.
+        Parameters: None
+        Returns: str
+        """
+
+        dirs = self.lefthand(self.grid[0][0], "E", [])
+
+        return "".join(dirs)
+
+
+    
+    def lefthand(self, cell, direction, dirs):
+
+        if cell == self.grid[-1][-1]:
+            return dirs
+        else:
+            if direction == "N":
+                if check_west(cell):
+                    dirs.append("W")
+                    self.lefthand(cell.west, "W", dirs)
+                elif check_north(cell):
+                    dirs.append("N")
+                    self.lefthand(cell.north, "N", dirs)
+                elif check_east(cell):
+                    dirs.append("E")
+                    self.lefthand(cell.east, "E", dirs)
+                elif check_south(cell):
+                    dirs.append("S")
+                    self.lefthand(cell.south, "S", dirs)
+            if direction == "E":
+                if check_north(cell):
+                    dirs.append("N")
+                    self.lefthand(cell.north, "N", dirs)
+                elif check_east(cell):
+                    dirs.append("E")
+                    self.lefthand(cell.east, "E", dirs)
+                elif check_south(cell):
+                    dirs.append("S")
+                    self.lefthand(cell.south, "S", dirs)
+                elif check_west(cell):
+                    dirs.append("W")
+                    self.lefthand(cell.west, "W", dirs)
+            if direction == "S":
+                if check_east(cell):
+                    dirs.append("E")
+                    self.lefthand(cell.east, "E", dirs)
+                elif check_south(cell):
+                    dirs.append("S")
+                    self.lefthand(cell.south, "S", dirs)
+                elif check_west(cell):
+                    dirs.append("W")
+                    self.lefthand(cell.west, "W", dirs)
+                elif check_north(cell):
+                    dirs.append("N")
+                    self.lefthand(cell.north, "N", dirs)
+            if direction == "W":
+                if check_south(cell):
+                    dirs.append("S")
+                    self.lefthand(cell.south, "S", dirs)
+                elif check_west(cell):
+                    dirs.append("W")
+                    self.lefthand(cell.west, "W", dirs)
+                elif check_north(cell):
+                    dirs.append("N")
+                    self.lefthand(cell.north, "N", dirs)
+                elif check_east(cell):
+                    dirs.append("E")
+                    self.lefthand(cell.east, "E", dirs)
+
+        return dirs
