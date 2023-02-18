@@ -1,0 +1,408 @@
+class ListOrthographer:
+    """
+    Class for a list-based orthographer
+    """
+
+    def __init__(self):
+        '''
+        Constructor
+        Parameters:
+          none
+        Initialize empty list of words.
+        '''
+        self.words = []
+
+    def insert(self, word):
+        '''
+        Insert the word into the orthographer if it consists only of lowercase
+        letters and is not already present.
+        Parameters:
+          word : str
+        Returns: (does not return a value)
+        '''
+
+        if word.isalpha() and (word.lower() == word):
+            if self.words.count(word) == 0:
+                self.words.append(word)
+
+
+    def insert_from_file(self, filename):
+        '''
+        Read the named file, insert words (one per line in file).
+        Parameters:
+          filename : str
+        Returns: (does not return a value)
+        '''
+
+        with open(filename) as file:
+            list_of_file = file.readlines()
+            new_l = [x.strip() for x in list_of_file]
+            for word in new_l:
+                if word.isalpha():
+                    self.insert(word)
+            file.close()
+
+    def contains(self, word):
+        '''
+        Check presence of given word in the orthographer.
+        Parameters:
+          word : str
+        Returns: boolean
+        '''
+        return self.words.count(word) > 0
+
+
+
+    def completions(self, prefix):
+        '''
+        Return all completions given prefix. The returned list is not
+        guaranteed to be in any particular order.
+        Parameters:
+          prefix : str
+        Returns: list[str]
+        '''
+
+        compl = []
+
+        length = len(prefix)
+
+        for word in self.words:
+            if word[0:length] == prefix:
+                compl.append(word)
+
+        return compl
+
+    def num_completions(self, prefix):
+        '''
+        Return the number of completions given prefix.
+        Parameters:
+          prefix : str
+        Returns: int
+        '''
+
+        count = self.completions(prefix)
+
+        return len(count)
+
+    def all_words(self):
+        '''
+        Return all the words in the orthographer. Returned list not
+        guaranteed in any particular order.
+        Parameters:
+          none
+        Returns: list[str]
+        '''
+        return self.words
+
+    def num_words(self):
+        '''
+        Return the number of words in the orthographer.
+        Parameters:
+          none
+        Returns: int
+        '''
+        return len(self.words)
+        
+        
+def clean_list(bad_list, words):
+    """
+    Takes a list of strings, and other lists of strings/lists and makes it into
+    one clean list of string values
+    Input: list of strings and list values
+    Output: list of strings
+    """
+
+    for element in bad_list:
+        if isinstance(element, str):
+            words.append(element)
+        else:
+            clean_list(element, words)
+
+    return words
+
+class Trie:
+    """
+    Class for representing tries
+    """
+
+    def __init__(self, root):
+        '''
+        Constructor
+        Parameters:
+         root : str (a character, but Python does not have a "char" type)
+        Initialize root to given char, empty dict of children, final to False.
+        '''
+        self.root = root
+        self.children = {}
+        self.final = False
+
+    def insert(self, word):
+        '''
+        Insert the word into the trie.
+        Parameters:
+	     word : str
+        Returns: (does not return a value)
+        '''
+
+        if self.root == word[0]:
+            if len(word) == 1:
+                self.final = True
+            elif len(word) > 1:
+                if word[1] in self.children:
+                    self.children[word[1]].insert(word[1:])
+                else:
+                    new = Trie(word[1])
+                    self.children[word[1]] = new
+                    new.insert(word[1:])
+
+    def contains(self, word):
+        '''
+        Check presence of given word in the trie.
+        Parameters:
+         word : str
+        Returns: boolean
+        '''
+
+        if self.root == word[0]:
+            if len(word) == 1 and self.final is True:
+                return True
+            elif len(word) == 1 and self.final is False:
+                return False
+            elif len(word) > 1:
+                if word[1] in self.children:
+                    return self.children[word[1]].contains(word[1:])
+                return False
+        else:
+            return False
+
+    def all_words(self):
+        '''
+        Return all the words in the trie. Returned list not guaranteed
+        in any particular order.
+        Parameters:
+         none
+        Returns: list[str]
+        '''
+
+        curr_word = ""
+
+        list_words = self.all_help(curr_word)
+
+        return clean_list(list_words, [])
+
+    def all_help(self, curr_word):
+        """
+        Returns all words in the Trie.  Builds one word at a time with depth
+        first search.  List returns in a messy format with list values as
+        well as string values
+        Input:
+            curr_word: (str) the word that is being built by the recursion
+    
+        Output:
+            words: list of lists and strings
+        """
+
+        words = []
+
+        curr_word += self.root
+
+        if self.final is True and len(self.children) == 0:
+            return curr_word
+        elif self.final is True and len(self.children) != 0:
+            words.append(curr_word)
+            for _, child in self.children.items():
+                words.append(child.all_help(curr_word))
+        else:
+            for _, child in self.children.items():
+                words.append(child.all_help(curr_word))
+
+        return words
+
+    def num_words(self):
+        '''
+        Return the number of words in the trie.
+        Parameters:
+          none
+        Returns: int
+        '''
+
+        counter = 0
+
+        if self.final is True and len(self.children) == 0:
+            counter += 1
+            return counter
+        elif self.final is True and len(self.children) != 0:
+            counter += 1
+            for _, child in self.children.items():
+                counter += child.num_words()
+        else:
+            for _, child in self.children.items():
+                counter += child.num_words()
+
+        return counter
+
+    def completions(self, prefix):
+        '''
+        Return all completions given prefix. The returned list is not
+        guaranteed to be in any particular order.
+        Parameters:
+          prefix : str
+        Returns: list[str]
+        '''
+
+        return self._compl(prefix, "")
+
+    def find_prefix(self, prefix):
+        """
+        not used but made as a reference for _compl.  Returns the Trie that
+        corresponds to the last letter of the prefix, if it exists
+        """
+
+        if self.root == prefix[0] and len(prefix) > 1:
+            if prefix[1] in self.children:
+                return self.children[prefix[1]].find_prefix(prefix[1:])
+        elif self.root == prefix[0] and len(prefix) == 1:
+            return self
+
+    def _compl(self, prefix, acc=""):
+        '''
+        Private method. Return all completions given prefix. The
+        variable acc stores the string seen thus far in traversal of
+        the trie. The returned list is not guaranteed to be in any
+        particular order.
+        Parameters:
+          prefix : str
+          acc : str
+        Returns: list[str]
+        '''
+
+        last_letter = None
+
+        if self.root == prefix[0] and len(prefix) > 1:
+            if prefix[1] in self.children:
+                return self.children[prefix[1]]._compl(prefix[1:], acc + prefix[:1])
+            else:
+                return []
+        elif self.root == prefix[0] and len(prefix) == 1:
+            last_letter = self
+
+            if last_letter is None:
+                return []
+
+            uncompl = last_letter.all_words()
+
+            for idx, word in enumerate(uncompl):
+                if len(acc) > 0:
+                    uncompl[idx] = acc + word
+
+            return uncompl
+        else:
+            return []
+
+    def num_completions(self, prefix):
+        '''
+        Return the number of completions of the given prefix.
+        Parameters:
+          prefix : str
+        Returns: int
+        '''
+
+        return len(self.completions(prefix))
+
+
+class TrieOrthographer:
+    """
+    Class for a trie-based orthographer
+    """
+
+    def __init__(self):
+        '''
+        Constructor
+        Parameters:
+          none
+        Initialize dictionary of empty tries, one per letter.
+        '''
+        self.tries = {}
+        for char in 'abcdefghijklmnopqrstuvwxyz':
+            self.tries[char] = Trie(char)
+
+    def insert(self, word):
+        '''
+        Insert the word into the orthographer if it consists only of lowercase
+        letters.
+        Parameters:
+          word : str
+        Returns: (does not return a value)
+        '''
+        if word.lower() == word:
+            if word[0] in self.tries:
+                self.tries[word[0]].insert(word)
+
+    def insert_from_file(self, filename):
+        '''
+        Read the named file, insert words (one per line in file).
+        Parameters:
+          filename : str
+        Returns: (does not return a value)
+        '''
+
+        with open(filename) as file:
+            list_file = file.readlines()
+            for word in list_file:
+                clean_w = word.strip()
+                if clean_w.isalpha():
+                    self.insert(clean_w)
+
+    def contains(self, word):
+        '''
+        Check presence of given word in the orthographer.
+        Parameters:
+          word : str
+        Returns: boolean
+        '''
+        return self.tries[word[0]].contains(word)
+
+    def completions(self, prefix):
+        '''
+        Return all completions given prefix. The returned list is not
+        guaranteed to be in any particular order.
+        Parameters:
+          prefix : str
+        Returns: list[str]
+        '''
+
+        return self.tries[prefix[0]].completions(prefix)
+
+    def num_completions(self, prefix):
+        '''
+        Return the number of completions given prefix.
+        Parameters:
+          prefix : str
+        Returns: int
+        '''
+
+        return self.tries[prefix[0]].num_completions(prefix)
+
+    def all_words(self):
+        '''
+        Return all the words in the orthographer. Returned list not
+        guaranteed in any particular order.
+        Parameters:
+          none
+        Returns: list[str]
+        '''
+        big_words = []
+
+        for trie in self.tries.values():
+            big_words.extend(trie.all_words())
+
+        return big_words
+
+    def num_words(self):
+        '''
+        Return the number of words in the orthographer.
+        Parameters:
+          none
+        Returns: int
+        '''
+        return len(self.all_words())
