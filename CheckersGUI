@@ -1,0 +1,940 @@
+#color contants
+RED = "RED"
+BLACK = "BLACK"
+#piece moveing up will be row - 1
+UP = -1
+#piece moving top down will be row + 1
+DOWN = 1
+
+class GenericBoard:
+    """
+    a generic form of a checkered board
+    """
+
+    def __init__(self, rows, columns):
+        """
+        intializes board
+
+        Inputs:
+            row (int): number of rows
+            columns (int): number of columns
+        """
+        self.rows = rows
+        self.columns = columns
+        self.grid = self._generate_grid()
+    
+    def _generate_grid(self):
+        """
+        Creates a list of lists of pieces or None.
+        Arranges pieces into the starting position for checkers.
+
+		Inputs: None
+		Returns: list[list[Piece or None]]
+        """
+        grid = []
+        #double for loop for rows and colomns
+        for row in range(self.rows):
+            temp = []
+            for col in range(self.columns):
+                #append None for empty space
+                temp.append(None)
+            #add the list of None as a row
+            grid.append(temp)
+        
+        return grid
+        
+    def __str__(self):
+        """
+        Returns a string representation of the board
+
+        Inputs: None
+        Returns: (str) the string representation
+        """
+        drawing = []
+        drawing.append('  ' + ' '.join(map(str, range(self.columns))))
+        for i, row in enumerate(self.grid):
+            temp_row = []
+            temp_row.append(str(i))
+            for item in row:
+                if item is None:
+                    temp_row.append('_')
+                else:
+                    temp_row.append(item.__str__())
+            temp_row = ' '.join(temp_row)
+            drawing.append(temp_row)
+        drawing = '\n'.join(drawing)
+        return drawing
+    
+    def add_piece(self, piece):
+        """
+        adds a piece to desired location on the board. If piece is already at
+        the position raises error
+
+        Inputs:
+            piece (Piece): the piece wanted to be added
+        Returns: None
+        """
+        #checks to make sure postion doesn't have a piece
+        if not self.get_piece((piece.row, piece.col)) is None:
+            raise Exception ("there is a piece already at location")
+        #checks to make sure not adding piece out of bounds
+        if  0 > piece.row >= self.rows or 0 > piece.col >= self.columns:
+            raise Exception ("that spot doesn't exist on the board")
+        #add piece
+        self.grid[piece.row][piece.col] = piece
+
+    def remove_piece(self, position):
+        """
+        Removes a piece from a position
+
+        Inputs: 
+            position tuple(int): the position on the board to put the piece of 
+            the format (row, col)
+        Returns: None
+        """
+        #unpack tuple
+        row, col = position
+        #remove piece if in bounds
+        if 0 <= row < self.rows and 0 <= col < self.columns:
+            self.grid[row][col] = None
+    
+    def move_piece(self, old_position, new_position):
+        """
+        Takes desired location/s to be moved to and changes the given
+        location of the piece on the board. If a different piece is at the 
+        new_position will raise an error:
+
+        Inputs:
+            old_position: tuple(int, int) → current position of the piece
+            desired to be moved of the format (row, col)
+            new_position: list[tuple(int, int)]
+            (one tuple if move, multiple tuples if jumping)
+
+        Returns: None
+        """
+        #get piece object at old position
+        piece = self.get_piece(old_position)
+        row, col = new_position
+        #reassigning positions row and column
+        piece.row = row
+        piece.col = col
+        #add_piece raises exception of there is a piece at location
+        self.add_piece(piece)
+        #removes piece
+        self.remove_piece(old_position)
+
+    def get_piece(self, position):
+        """
+        Returns the object Piece at the location imputed
+
+        Inputs:
+            location_of_piece tuple(int, int) the location of the piece wanted
+        Returns: Piece (the desired piece) or None (if there is no piece
+        """
+        #unpack
+        row, col = position
+        #gets and returns piece object or None
+        if 0 <= row < self.rows and 0 <= col < self.columns:
+            return self.grid[row][col]
+
+class Piece:
+    """
+    Class for representing a piece for checkers
+    """
+
+    def __init__(self, row, col, color, king = False):
+        """
+        Constructor
+
+        Inputs: 
+            row (int): Row that the piece is in
+            column(int): Column that the piece is in
+            king(boolean): Whether or not the piece is a king (default is false)
+            color(str): “RED” or “BLACK”
+        """
+        self.row = row
+        self.col = col
+        self.king = False
+        self.color = color
+
+    def __str__(self):
+        """
+        Returns a string representation of the piece. lower case r and b for 
+        regular piece and uppercase R and B for kings
+
+        Inputs: None
+        Returns: (str) the string representation
+        """
+        if self.color == RED:
+            if self.king:
+                return 'R'
+            else:
+                return 'r'
+        else:
+            if self.king:
+                return 'B'
+            else:
+                return 'b'
+
+    def possible_moves(self):
+        """
+        Creates a list of possible moves that are not jumps
+        for a piece depending on its color and whether or not it is a king
+        (does not consider the rest of the board). Two possible moves for a
+        piece that is not a king, four posisble moves for a piece that is a
+        king.
+
+        Inputs: None
+        Returns:
+            lst(tuples): Tuples containing row and column of possible moves
+            for a piece
+        """
+        if self.king:
+            temp = []
+            #king can move diagnal both directions
+            for row_add in [-1, 1]:
+                for col_add in [-1, 1]:
+                    temp.append((self.row + row_add, self.col + col_add))
+            return temp
+        elif self.color == RED:
+            #red non-king moves up board and diagonal
+            return [(self.row + UP, self.col - 1), (self.row + UP, self.col + 1)]
+        else:
+            #black non-king moves down board and diagonal
+            return [(self.row + DOWN, self.col - 1), (self.row + DOWN, self.col + 1)]
+
+
+    def possible_jumps(self):
+        """
+        Creates a list of the coordinates of possible first jumps for a
+        piece depending on its color and whether or not it is a king.
+        (does not consider the rest of the board). Two possible jumps for a
+        piece that is not a king, four posisble jumps for a piece that is a
+        king.
+
+        Inputs: None
+        Returns: lst(tuples): Tuples containing row and column coordinates of
+        possible jumps for a piece 
+        """
+        if self.king:
+            temp = []
+            #king can move diagnal both directions
+            for row_add in [-2, 2]:
+                for col_add in [-2, 2]:
+                    temp.append((self.row + row_add, self.col + col_add))
+            return temp
+        elif self.color == RED:
+            #red non-king moves up board and diagonal
+            return [(self.row + UP + UP, self.col - 2), (self.row + UP + UP, self.col + 2)]
+        else:
+            #black non-king moves down board and diagonal
+            return [(self.row + DOWN + DOWN, self.col - 2), (self.row + DOWN + DOWN, self.col + 2)]
+    def to_king(self):
+        """
+        Changes a piece to a king by setting king attribute to True
+
+        Inputs: None
+        Returns: None
+        """
+        self.king = True
+
+    def reassign(self, new_pos):
+        """
+        Changes the coordinates of a piece.
+
+        Input: 
+            new_pos tuple(row, column): The new row and column of a piece
+            Returns: None
+        """
+        row, col = new_pos
+        self.row = row
+        self.col = col
+    
+class CheckersBoard:
+    """
+    Class for representing the Checkers Board
+    """
+    def __init__(self, n = 3):
+        self.rows = 2 * n + 2
+        self.columns = 2 * n + 2
+        self.grid = GenericBoard(self.rows, self.columns)
+        self.turn = BLACK
+        self.black_piece = {}
+        self.red_piece = {}
+        self.winner = None
+        self._start(n)
+
+    def __str__(self):
+        """
+        Returns a string representation of the board
+
+        Inputs: None
+        Returns: (str) the string representation
+        """
+        return self.grid.__str__()
+    
+    def _start(self, n):
+        """
+        Arranges pieces into the starting position for checkers.
+        Inputs: None
+        Returns: None
+        """
+        # add black pieces
+        #want rows 0 to n - 1 for black pieces
+        for row in range(n):
+            for col in range(self.columns):
+                #checkers piece are put on dark squares which are either row or
+                #column are odd but not both like (0,1)
+                if not (row + col) % 2 == 0:
+                    black_piece = Piece(row, col, BLACK)
+                    self.add_piece(black_piece)
+
+        #add Red pieces to the last n rows
+        for row in range(self.rows - n, self.rows):
+            for col in range(self.columns):
+                #checkers on dark spaces
+                if not (row + col) % 2 == 0:
+                    red_piece = Piece(row, col, RED)
+                    self.add_piece(red_piece)
+ 
+    def is_feasible(self, current_position, new_position):
+        """
+            Determines if a given position is a valid move for a piece.
+            Checks if the given position is empty, and if it is valid for
+            the piece to move to (forward for nonkings, forwards or
+            backwards for kings)
+
+            Inputs: new_positions tuple(row, column): coordinates of move
+                    current_position tuple(int, int) where the piece is located
+            Returns: boolean
+        """
+        #check if current_position and new_position is in bounds of grid
+        new_row, new_col = new_position
+        curr_row, curr_col = current_position
+        if not (0 <= new_row < self.rows 
+                and 0 <= new_col < self.columns
+                and 0 <= curr_row < self.rows
+                and 0 <= curr_col < self.columns):
+            return False
+        #Checks if empty in new_position and there's a piece in current_position
+        if (not self.get_piece(new_position) is None):
+            return False
+        #checks if it is valid move for a piece
+        return (self._is_feasible_move(current_position, new_position) or
+                self._is_feasible_jump(current_position, new_position))
+    
+    def _is_feasible_move(self, current_position, new_position):
+        """
+            Determines if a given position is a valid move for a piece exluding
+            jumps. Checks if it is valid for the piece to move to (forward for
+            nonkings, forwards or backwards for kings)
+
+            Inputs: new_positions tuple(row, column): coordinates of move
+                    current_position tuple(int, int) where the piece is located
+            Returns: boolean
+        """
+        #determines if the piece has ability to move by calling possible_moves
+        if new_position in self.get_piece(current_position).possible_moves():
+            return True
+        return False
+
+    def _is_feasible_jump(self, current_position, new_position):
+        """
+            Determines if a given position is a valid jump for a piece.
+            Checks if it is valid for the piece to jump to (forward for
+            nonkings, forwards or backwards for kings)
+
+            Inputs: new_positions tuple(row, column): coordinates of move
+                    current_position tuple(int, int) where the piece is located
+            Returns: boolean
+        """
+        piece = self.get_piece(current_position)
+        #gets the potential jumps of a piece
+        poss_jump = piece.possible_jumps()
+        for jumps in poss_jump:
+            #gets the jumped piece
+            jumped_piece = self.get_jumped_piece(current_position, new_position)
+
+            #checks if the piece can jump in that way
+            #checks if there is a piece at the location being jumped over
+            #checks that the piece being jumped over is of the opposite color
+            if (jumps == new_position 
+                    and not jumped_piece is None
+                    and piece.color != jumped_piece.color):
+                return True
+        return False
+
+    def valid_piece_moves(self, current_position):
+        """
+        From a given coordinate of a piece, finds all the available moves
+        for that piece.
+
+        Inputs: 
+            current_position of a piece in the board tuple(int, int)
+            where int is the row and column index
+        Returns:
+            list[list[tuple(int, int)]] where the tuples contain
+            coordinates of all the valid moves available for the given piece
+        """
+        #call get_piece
+        piece = self.get_piece(current_position)
+        #call possible_moves and possible_jumps method on Piece
+        valid_jumps = self._valid_piece_jumps(current_position)
+        #checks to see if first entry is an empty list or not
+        if not len(valid_jumps[0]) == 0:
+            return valid_jumps
+        return self._valid_piece_walks(current_position)
+
+    def _valid_piece_walks(self, current_position):
+        """
+        From a given coordinate of a piece, finds all the available non-jumps
+        move.
+
+        Inputs: 
+            current_position of a piece in the board tuple(int, int)
+            where int is the row and column index
+        Returns:
+            list[list[tuple(int, int)]] where the tuples contain
+            coordinates of all the valid moves avail
+        """
+        piece = self.get_piece(current_position)
+        #if there is no piece returns empty list
+        if piece is None:
+            return [[]]
+        #goes through all possible moves
+        all_moves = []
+        for move in piece.possible_moves():
+            if self.is_feasible(current_position, move):
+                all_moves.append([move])
+
+        if len(all_moves) == 0:
+            return [[]]
+        
+        return all_moves
+    
+    def _valid_piece_jumps(self, current_position):
+        """
+        From a given coordinate of a piece, finds all the available jumps
+        for that piece.
+
+        Inputs: 
+            current_position of a piece in the board tuple(int, int)
+            where int is the row and column index
+        Returns:
+            list[list[tuple(int, int)]] where the tuples contain
+            coordinates of all the valid moves avail
+        """
+        piece = self.get_piece(current_position)
+        #if there is no piece to jump over return empty lst of l
+        if piece is None:
+            return [[]]
+        all_jumps = []
+        #goes through all the possible jump
+        for jump in piece.possible_jumps():
+            #if it is a legal jump add to the list all_jumps
+            if self.is_feasible(current_position, jump):
+                all_jumps.append(jump)
+        
+        #base case if there isn't any leagal jump return and empty list of list
+        if len(all_jumps) == 0:
+            return [[]]
+        
+        final = []
+        #recursive call
+        for jump in all_jumps:
+            #gets the jumped piece
+            jumped_piece = self.get_jumped_piece(current_position, jump)
+            #change the board to what it would look like if piece was moved
+            self._jump(current_position, jump)
+            #recursive call
+            collect = self._valid_piece_jumps(jump)
+            #return board to original state
+            self.grid.move_piece(jump, current_position)
+            self.add_piece(jumped_piece)
+
+            #recursive call returns a list so cycle through them all
+            for potential_jumps in collect:
+                final.append([jump] + potential_jumps)
+        return final
+    
+    def all_valid_moves(self):
+        """
+        Finds all the valid moves one player can take. Each pieces
+        moves are a list, which are grouped all together in a single large list
+
+        Inputs: None
+        Returns: Dict where the keys are pieces and the values are 
+        [list[list[tuple(int, int)]]] where tuple contains coordinates
+
+        """
+        piece_jumps = {}
+        piece_moves = {}
+        #cycle through the black pieces if its black's turn calling valid_piece_moves
+        if self.turn == BLACK:
+            for piece in self.black_piece:
+                moves = self.valid_piece_moves((piece.row, piece.col))
+                #if the first index has 0 length then it is a [[]] and there are no moves
+                if len(moves[0]) != 0:
+                    #if the first part of the first move is a jump the rest are jumps
+                    if self.is_jump((piece.row, piece.col), moves[0][0]):
+                        piece_jumps[piece] = moves
+                    else:
+                        piece_moves[piece] = moves
+        #cycle through the red pieces if its black's turn calling valid_piece_moves
+        elif self.turn == RED:
+            for piece in self.red_piece:
+                moves = self.valid_piece_moves((piece.row, piece.col))
+                #if the first index has 0 length then it is a [[]] and there are no moves
+                if len(moves[0]) != 0:
+                #if the first part of the first move is a jump the rest are jumps
+                    if self.is_jump((piece.row, piece.col), moves[0][0]):
+                        piece_jumps[piece] = moves
+                    else:
+                        piece_moves[piece] = moves
+
+        #if there are no jumps can return all of the moves
+        if len(piece_jumps) == 0:
+            return piece_moves
+        #if there is a single jump don't return any walks just the jumps
+        return piece_jumps
+    
+    def _jump(self, curr_pos, jump_move):
+        """
+        Changes the location of a piece on the board.Takes a predetermined
+        location for the piece to jump to. Removes each piece jumped over from
+        the board permanently.
+
+        Inputs:
+            curr_pos: tuple(int, int) → current position of the piece
+            desired to be moved
+            jump_move: tuples(int, int) desired jump to move
+        Returns: None
+        """
+        #if not valid move don't move anything
+        if not self.is_feasible(curr_pos, jump_move):
+            return
+        #move the piece to the location in the list of tuples
+        self.grid.move_piece(curr_pos, jump_move)
+        #update piece row and col
+        self.get_piece(jump_move).reassign(jump_move)
+    
+        #remove piece jumped over from the board from piece dictionary
+        jumped_piece = self.get_jumped_piece(curr_pos, jump_move)
+        if jumped_piece.color == BLACK:
+            del self.black_piece[jumped_piece]
+        else:
+            del self.red_piece[jumped_piece]
+
+        #removes piece from board
+        self.grid.remove_piece((jumped_piece.row, jumped_piece.col))
+    
+    def _walk(self, curr_pos, walk_move):
+        """
+        Changes the location of a piece on the board.Takes a predetermined
+        location for the piece to move to that is not a jump and moves the piece
+        there
+
+        Inputs:
+            curr_pos: tuple(int, int) → current position of the piece
+            desired to be moved
+            jump_move: tuples(int, int) desired jump to move
+        Returns: None
+        """
+        #if not a valid move doesn't move piece
+        if not self.is_feasible(curr_pos, walk_move):
+            return
+        #move the piece to the location in the list of tuples
+        self.grid.move_piece(curr_pos, walk_move)
+        #updete pieces row and col
+        self.get_piece(walk_move).reassign(walk_move)
+
+    def movements(self, curr_pos, destination):
+        """
+        Takes desired location/s to be moved to and changes the given
+        location of the piece on the board.
+
+        Inputs:
+            curr_pos: tuple(int, int) → current position of the piece
+            desired to be moved
+            destination: list[tuple(int, int)]
+            (one tuple if move, multiple tuples if jumping)
+
+        Returns: None or Winner (str of player who won)
+        """
+        if not self.winner is None:
+            return
+        piece = self.get_piece(curr_pos)
+        #call all_valid_moves to check if allowed move
+        moves = self.all_valid_moves()
+        #checks the piece moves and that it is a move of that piece
+        if moves.get(piece, 0) != 0 and destination in moves[piece]:
+            #if it is a jump call jump method
+            if self.is_jump(curr_pos, destination[0]):
+                for jumps in destination:
+                    self._jump(curr_pos, jumps)
+            #if not call walk method
+            else:
+                #walking will always be 1 move so we can use [0] index
+                self._walk(curr_pos, destination[0])
+            #if the piece is on the opposite side of it’s color king it
+            if piece.color == RED and piece.row == 0:
+                piece.to_king()
+            elif piece.color == BLACK and piece.row == self.rows - 1:
+                piece.to_king()
+            #call _winner to test it there is a winner
+            self._winner()
+            #update turn to other color
+            if self.turn == BLACK:
+                self.turn =RED
+            else:
+                self.turn = BLACK
+
+    def _winner(self):
+        """
+        From attributes of board (pieces per player, if a player has any
+        moves left), updtes winner if either player has met the requirements to
+        win yet
+
+        Inputs: None
+        Returns: None
+
+        """
+        #is red_pieces or black pieces empty
+        if len(self.black_piece) == 0:
+            self.winner = RED
+        elif len(self.red_piece) == 0:
+            self.winner = BLACK
+        #can the next colors turn not move ->they lose
+
+        #get all the moves of both colors
+        #need to change the turn to piece color that we want the moves of
+        actual_turn = self.turn
+        self.turn = BLACK
+        black_moves = self.all_valid_moves()
+        self.turn = RED
+        red_moves = self.all_valid_moves()
+        self.turn = actual_turn
+
+        #if not can the other color move ->draw
+        if len(black_moves) == 0 and len(red_moves) == 0:
+            self.winner = "DRAW"
+
+        #if one player can't move the other wins
+        elif len(black_moves) == 0:
+            self.winner = RED
+        elif len(red_moves) == 0:
+            self.winner = BLACK
+        
+    def get_piece(self, location_of_piece):
+        """
+		Returns the object Piece at the location imputed
+
+		Inputs:
+			location_of_piece tuple(int, int) the location of the piece wanted
+		Returns: Piece (the desired piece) or None (if there is no piece
+		"""
+        return self.grid.get_piece(location_of_piece)
+
+    def get_winner(self):
+        """
+		gets the winner by accessing the winner attribute if there is no winner
+        yet return None if it is a draw returns “Draw” or returns the winning
+        color”
+		
+		Inputs: None
+        Returns: str (the winner or a draw) or None if the winner hasn’t been decided 
+		"""
+        return self.winner
+
+    def get_jumped_piece(self, current_position, new_position):
+        """
+        Returns the piece that is potentially being jumped over
+
+        Inputs:
+            new_positions tuple(row, column): coordinates of move
+            current_position tuple(int, int) where the piece is located
+        Returns: (Piece): the piece being jumped over
+        """
+        #creates a tuple of the location of the piece being jumped over
+        #it would be the average row and average col of curr pos and new pos
+        move_row, move_col = new_position
+        curr_row, curr_col = current_position
+        jumped_space = (((curr_row + move_row) // 2), ((curr_col + move_col) // 2))
+
+        #gets the piece at jumped location and returns it
+        return self.get_piece(jumped_space)
+    
+    def add_piece(self, piece):
+        """
+        adds a piece to desired location on the board. If piece is already at
+        the position raises error
+
+        Inputs:
+            piece (Piece): the piece wanted to be added
+        Returns: None
+        """
+        self.grid.add_piece(piece)
+        if piece.color == BLACK:
+            self.black_piece[piece] = None
+        else:
+            self.red_piece[piece] = None
+
+    def is_jump(self, curr_pos, new_pos):
+        """
+        determines whether a move is a jump
+        
+        Inputs:
+            curr_pos:(tuple(int, int)) current position
+            new_pos:(tuple(int,int)) new position
+        Returns Bool True if move is a jump
+        """
+        curr_row, curr_col = curr_pos
+        new_row, new_col = new_pos
+        #finds the amount of spaces moved
+        move_row = abs(curr_row - new_row)
+        move_col = abs(curr_row - new_row)
+
+        #a move of an absolute value of 2 for both row and col is a jump
+        if move_row == 2 and move_col == 2:
+            return True
+        #anything else is not a jumpr
+        return False
+        
+import pygame
+import pygame_menu
+import time
+import sys
+from game_logic import GenericBoard, Piece, CheckersBoard
+from typing import Union
+
+#constants
+
+RED = (230, 122, 185)
+DARK_RED = (200, 100, 175)
+BLACK = (81, 29, 117)
+BLUE = (193, 97, 201)
+GREY = (128, 128, 128)
+WHITE = (255, 255, 255)
+
+#drawing a piece.  Applied in next step/draw_board
+def draw_piece(piece, WIN, ROWS, SQUARE_SIZE, COLS, CROWN):
+    """
+    Draws a piece for checkers. Helper for draw_board.
+
+    Args:
+        piece: Piece type from board
+
+    Returns:
+        None
+    """
+
+    #padding keeps the piece away from the borders of the square
+    BORDER = SQUARE_SIZE * .15
+
+    #outline width for piece
+    OUTLINE = SQUARE_SIZE * .02
+
+    #determines radius for the piece and draws
+    radius = SQUARE_SIZE//2 - BORDER
+    pygame.draw.circle(WIN, GREY, (SQUARE_SIZE * piece.col + SQUARE_SIZE // 2, SQUARE_SIZE * piece.row + SQUARE_SIZE // 2), radius + OUTLINE)
+    pygame.draw.circle(WIN, piece.color, (SQUARE_SIZE * piece.col + SQUARE_SIZE // 2, SQUARE_SIZE * piece.row + SQUARE_SIZE // 2), radius)
+
+    #adds crown if the piece is a king
+    if piece.king:
+        WIN.blit(CROWN, (SQUARE_SIZE * piece.col + SQUARE_SIZE // 2 - CROWN.get_width()//2, SQUARE_SIZE * piece.row + SQUARE_SIZE // 2 - CROWN.get_height()//2))
+
+#for next step
+def get_row_col_from_mouse(pos, SQUARE_SIZE):
+    """
+    takes a postion from a MOUSEBUTTONDOWN pygame event and translates it to
+    the row and column that the pixel clicked is in
+    
+    input: tuple(int, int)
+    Output: int, int (row, column)
+    """
+
+    x, y = pos
+    row = y // SQUARE_SIZE
+    col = x // SQUARE_SIZE
+    return row, col
+
+#draw valid moves dots
+def draw_valid(selected, board, WIN, SQUARE_SIZE):
+    """
+    Draws a small blue circle on every square that contains a valid option for
+    a selected piece to move to
+    
+    input: Piece Type Object
+    output: None
+    """
+
+    for move in board.valid_piece_moves((selected.row, selected.col)):
+        for real_move in move:
+            row, col = real_move
+            pygame.draw.circle(WIN, BLUE, (col * SQUARE_SIZE + SQUARE_SIZE//2, row * SQUARE_SIZE + SQUARE_SIZE//2), 15)
+    pygame.display.update()
+
+#winner of game
+def win(winner):
+    """
+    If there is a winner of the game, or if it is a draw, this function runs.
+    It changes the window to a standard size no matter the original size of
+    the board, and print the name of the winner (or draw)
+    
+    input: str of the winning player's color or "draw"
+    output: None
+    """
+
+    pygame.init()
+
+    windowsSize = pygame.display.set_mode((800,600)) 
+    pygame.display.set_caption("Checkers Winner!")
+
+    Font = pygame.font.SysFont("Times New Roman", 90)
+    Winner = Font.render("{} wins".format(winner), 1, (255, 0, 0), (255, 255, 255))
+
+    while 1:
+        for event in pygame.event.get():
+            if event.type==pygame.QUIT:
+                sys.exit()
+        windowsSize.blit(Winner, (225, 200))
+        pygame.display.update()
+
+#draw board
+def draw_board(board, WIN, ROWS, SQUARE_SIZE, COLS, CROWN, player1, player2):
+    """
+    draws the checker board pattern on the window and adds the pieces,
+    specified by a pre made Board Type Object
+    
+    Input: None
+    Output: None
+    """
+
+    WIN.fill(WHITE)
+
+    for row in range(ROWS):
+        for col in range(row % 2, ROWS, 2):
+            pygame.draw.rect(WIN, RED, (row*SQUARE_SIZE, col*SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE))
+
+    for row in range(ROWS):
+        for col in range(COLS):
+            piece = board.grid.grid[row][col]
+            if piece is not None:
+                draw_piece(piece, WIN, ROWS, SQUARE_SIZE, COLS, CROWN)
+
+    pygame.draw.rect(WIN, DARK_RED, (0, 100*COLS, 100*ROWS, 0.2*100*COLS))
+
+    if board.turn == "BLACK":
+        player = player1
+    if board.turn == "RED":
+        player = player2
+
+    display_player_turn(WIN, player, 100*ROWS, COLS)
+                
+    pygame.display.update()
+
+def display_player_turn(WIN, player, WIDTH, COLS):
+    Font = pygame.font.SysFont("Times New Roman", 45)
+    text_width, text_height = Font.size("{}'s turn".format(player))
+    HEIGHT = 0.2*100*COLS//2
+
+    turn = Font.render("{}'s turn".format(player), True, WHITE)
+    WIN.blit(turn, ((WIDTH//2 - text_width//2, 100*COLS + HEIGHT - text_height//2)))
+
+
+def play_checkers(n, player1, player2):
+    """
+    From a given number n, creates a board object and then sets players.  Then,
+    it plays the game checker.  Click with the mouse to select and move pieces
+    
+    Input: int representing number of rows without pieces
+    Output: None
+    """
+
+    board = CheckersBoard(n)
+
+    #constants
+    ROWS, COLS = board.rows, board.columns
+    WIDTH, HEIGHT = 100*ROWS, 100*COLS
+    SQUARE_SIZE = WIDTH//COLS
+    CROWN = pygame.transform.scale(pygame.image.load('asset/pixil-frame-0.png'), (SQUARE_SIZE*0.6, SQUARE_SIZE*0.4))
+    
+    #make window and add caption
+    WIN = pygame.display.set_mode((WIDTH, HEIGHT*1.2))
+    pygame.display.set_caption("Checkers")
+
+    draw_board(board, WIN, ROWS, SQUARE_SIZE, COLS, CROWN, player1, player2)
+
+    run = True
+    do_move = False
+
+    while run:
+
+        if board.winner is not None:
+            if board.winner == "BLACK":
+                winner = player1
+            if board.winner == "RED":
+                winner = player2
+            win(winner)
+
+        for event in pygame.event.get():
+            #if user closes window, quit game
+            if event.type == pygame.QUIT:
+                run = False
+
+            #if player is human, check for mouse event. Find position of
+            #mouse event
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                pos = pygame.mouse.get_pos()
+                curr_row, curr_col = get_row_col_from_mouse(pos, SQUARE_SIZE)
+                if do_move == True:
+                    print("here")
+                    end_moves = []
+                    for move in board.valid_piece_moves((selected.row, selected.col)):
+                        end_moves.append(move[-1])
+                    if (curr_row, curr_col) in end_moves:
+                        print("now im here")
+                        for move in board.valid_piece_moves((selected.row, selected.col)):
+                            if (curr_row, curr_col) in move:
+                                i = move
+                                print(i)
+                        board.movements((selected.row, selected.col), i)
+                    draw_board(board, WIN, ROWS, SQUARE_SIZE, COLS, CROWN, player1, player2)
+
+                    do_move = False
+                else:
+                    #if you have already clicked a piece and change your mind about
+                    #which piece you want to move, must tap some random nonvalid
+                    #move before selecting new piece, or double click new piece
+                    draw_board(board, WIN, ROWS, SQUARE_SIZE, COLS, CROWN, player1, player2)
+                    if board.grid.grid[curr_row][curr_col] is not None:
+                        selected = board.grid.grid[curr_row][curr_col]
+                        if selected.color == board.turn:
+                            draw_valid(selected, board, WIN, SQUARE_SIZE)
+                            do_move = True
+
+
+pygame.init()
+surface = pygame.display.set_mode((600, 400))
+
+def set_difficulty(value, difficulty):
+    pass
+
+def start_the_game():
+    player1 = p1.get_value()
+    player2 = p2.get_value()
+    play_checkers(3, player1, player2)
+
+mytheme = pygame_menu.themes.THEME_ORANGE.copy()
+mytheme.title_background_color=(215, 110, 160)
+mytheme.background_color = (255, 140, 200)
+
+menu = pygame_menu.Menu("Checkers", 600, 400, theme=mytheme)
+
+p1 = menu.add.text_input('Player 1 :', default='')
+p2 = menu.add.text_input('Player 2 :', default='')
+menu.add.selector('Player 2 Type:', [('Human', 1), ('Smart Bot', 2), ('Easy Bot', 3)], onchange=set_difficulty)
+menu.add.button('Play', start_the_game)
+menu.add.button('Quit', pygame_menu.events.EXIT)
+
+menu.mainloop(surface)
